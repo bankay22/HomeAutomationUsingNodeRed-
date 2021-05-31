@@ -1,0 +1,218 @@
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <SoftwareSerial.h>
+SoftwareSerial s(3,1);
+
+const char* ssid = "Linksys19039";
+const char* password = "npnftfpd8r";
+const char* mqtt_server = "192.168.1.149";
+
+
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int light=0;
+const int auto1=5;
+const int switch1=4;
+const int fan = 15;
+const int speed5 = 14;
+const int speed6 = 12;
+const int speed7 = 13;
+
+void setup_wifi() {
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("WiFi connected - ESP IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void callback(String topic, byte* message, unsigned int length) {
+  Serial.print("Message arrived on topic: ");
+  Serial.print(topic);
+  Serial.print(". Message: ");
+  String messageTemp;
+
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)message[i]);
+    messageTemp += (char)message[i];
+  }
+  Serial.println();
+
+  if (topic == "room/lamp") {
+    Serial.print("Changing Room switch to ");
+    if (messageTemp == "on") {
+      digitalWrite(light, LOW);
+      Serial.print("lamp on");
+    }
+else if (messageTemp == "off"){
+  digitalWrite(light,HIGH);
+  Serial.print("lamp off");
+}
+}
+
+if (topic == "room/switch") {
+    Serial.print("Changing Room switch to ");
+    if (messageTemp == "on") {
+      digitalWrite(switch1, LOW);
+      Serial.print("switch on");
+    }
+else if (messageTemp == "off"){
+  digitalWrite(switch1,HIGH);
+  Serial.print("switch off");
+}
+}
+
+if (topic == "room/auto") {
+    Serial.print("Changing auto switch to ");
+    if (messageTemp == "on") {
+      digitalWrite(auto1, LOW);
+      Serial.print("manual on");
+    }
+else if (messageTemp == "off"){
+  digitalWrite(auto1,HIGH);
+  Serial.print("manual off");
+}
+}
+  
+
+
+  if (topic == "room/fan") {
+    Serial.print("Changing Room lamp to ");
+    if (messageTemp == "0") {
+      digitalWrite(fan, HIGH);
+      Serial.print("fan off");
+      s.write(0x00);
+    }
+
+  
+  else if (messageTemp == "1") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 64");
+    s.write(0x40);
+
+  }
+
+  else if (messageTemp == "2") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 80");
+    s.write(0x50);
+  }
+  
+  else if (messageTemp == "3") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 100");
+    s.write(0x64);
+
+  } else if (messageTemp == "4") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 100");
+    s.write(0x96);
+
+  }
+  else if (messageTemp == "5") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xA0);
+  }
+  else if (messageTemp == "6") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xB4);
+  }
+  else if (messageTemp == "7") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xDC);
+  }
+  else if (messageTemp == "8") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xE6);
+  }
+  else if (messageTemp == "9") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xFA);
+  }
+  else if (messageTemp == "10") {
+    digitalWrite(fan, LOW);
+    Serial.print("speed 50");
+    s.write(0xFF);
+  }
+
+
+  }
+
+
+  Serial.println();
+}
+
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+
+    if (client.connect("ESP8266Client")) {
+      Serial.println("connected");
+      // Subscribe or resubscribe to a topic
+      // You can subscribe to more topics (to control more LEDs in this example)
+      client.subscribe("room/fan");
+      client.subscribe("room/switch");
+        client.subscribe("room/auto");
+        client.subscribe("room/lamp");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+void setup() {
+  pinMode(fan, OUTPUT);
+  pinMode(speed5, OUTPUT);
+  pinMode(speed6, OUTPUT);
+  pinMode(speed7, OUTPUT);
+  pinMode(switch1, OUTPUT);
+  pinMode(auto1, OUTPUT);
+  pinMode(light, OUTPUT);
+
+  digitalWrite(fan,HIGH);
+  digitalWrite(switch1,HIGH);
+  digitalWrite(auto1,HIGH);
+  digitalWrite(light,HIGH);
+  digitalWrite(speed5,HIGH);
+  digitalWrite(speed6,HIGH);
+  digitalWrite(speed7,HIGH);
+  
+
+
+  Serial.begin(115200);
+  Serial1.begin(115200);
+  s.begin(9600);
+  
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+
+}
+
+void loop() {
+
+  if (!client.connected()) {
+    reconnect();
+  }
+  if (!client.loop())
+    client.connect("ESP8266Client");
+}
